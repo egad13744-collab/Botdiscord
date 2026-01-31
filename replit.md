@@ -102,6 +102,10 @@ Each animal has a skill (passive or active):
 | `/trade` | Trade with player |
 | `/guess` | Number guessing game |
 | `/slots` | Slot machine |
+| `/leaderboard` | View leaderboard |
+| `/leaderboard coin` | Top coin rankings |
+| `/leaderboard level` | Top level rankings |
+| `/leaderboard win` | Top win rankings |
 
 ## Technical Details
 - Language: Python 3.11
