@@ -3,6 +3,7 @@ import asyncpg
 import json
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, List
+import uuid
 
 class Database:
     def __init__(self):
@@ -66,6 +67,32 @@ class Database:
                     total_damage_dealt BIGINT DEFAULT 0
                 )
             ''')
+            
+            await conn.execute('''
+                CREATE TABLE IF NOT EXISTS animals (
+                    id TEXT PRIMARY KEY,
+                    user_id BIGINT REFERENCES users(user_id),
+                    animal_id TEXT NOT NULL,
+                    nickname TEXT,
+                    level INTEGER DEFAULT 1,
+                    exp INTEGER DEFAULT 0,
+                    current_hp INTEGER,
+                    max_hp INTEGER,
+                    attack INTEGER,
+                    defense INTEGER,
+                    is_in_team BOOLEAN DEFAULT FALSE,
+                    team_slot INTEGER,
+                    captured_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            
+            await conn.execute('''
+                CREATE INDEX IF NOT EXISTS idx_animals_user ON animals(user_id)
+            ''')
+            
+            await conn.execute('''
+                CREATE INDEX IF NOT EXISTS idx_animals_team ON animals(user_id, is_in_team)
+            ''')
     
     async def get_user(self, user_id: int, username: str = None) -> Dict[str, Any]:
         async with self.pool.acquire() as conn:
@@ -127,6 +154,9 @@ class Database:
     
     def exp_for_level(self, level: int) -> int:
         return 100 + (level * 50)
+    
+    def animal_exp_for_level(self, level: int) -> int:
+        return 50 + (level * 30)
     
     async def add_coins(self, user_id: int, amount: int):
         async with self.pool.acquire() as conn:
@@ -224,3 +254,160 @@ class Database:
                 f'UPDATE users SET {cooldown_type} = $1 WHERE user_id = $2',
                 datetime.utcnow(), user_id
             )
+    
+    async def add_animal(self, user_id: int, animal_data: Dict[str, Any]) -> str:
+        animal_uuid = str(uuid.uuid4())[:8]
+        async with self.pool.acquire() as conn:
+            await conn.execute('''
+                INSERT INTO animals (id, user_id, animal_id, nickname, level, exp, current_hp, max_hp, attack, defense)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            ''', 
+                animal_uuid,
+                user_id,
+                animal_data['animal_id'],
+                animal_data.get('nickname', animal_data['name']),
+                1,
+                0,
+                animal_data['hp'],
+                animal_data['hp'],
+                animal_data['attack'],
+                animal_data['defense']
+            )
+        return animal_uuid
+    
+    async def get_user_animals(self, user_id: int) -> List[Dict[str, Any]]:
+        async with self.pool.acquire() as conn:
+            animals = await conn.fetch(
+                'SELECT * FROM animals WHERE user_id = $1 ORDER BY captured_at DESC',
+                user_id
+            )
+            return [dict(a) for a in animals]
+    
+    async def get_animal(self, animal_uuid: str) -> Optional[Dict[str, Any]]:
+        async with self.pool.acquire() as conn:
+            animal = await conn.fetchrow(
+                'SELECT * FROM animals WHERE id = $1',
+                animal_uuid
+            )
+            return dict(animal) if animal else None
+    
+    async def get_animal_team(self, user_id: int) -> List[Dict[str, Any]]:
+        async with self.pool.acquire() as conn:
+            animals = await conn.fetch(
+                '''SELECT * FROM animals 
+                   WHERE user_id = $1 AND is_in_team = TRUE 
+                   ORDER BY team_slot''',
+                user_id
+            )
+            return [dict(a) for a in animals]
+    
+    async def add_animal_to_team(self, user_id: int, animal_uuid: str) -> bool:
+        async with self.pool.acquire() as conn:
+            animal = await conn.fetchrow(
+                'SELECT * FROM animals WHERE id = $1 AND user_id = $2',
+                animal_uuid, user_id
+            )
+            
+            if not animal:
+                return False
+            
+            if animal['is_in_team']:
+                return False
+            
+            team_count = await conn.fetchval(
+                'SELECT COUNT(*) FROM animals WHERE user_id = $1 AND is_in_team = TRUE',
+                user_id
+            )
+            
+            user = await self.get_user(user_id)
+            max_team_size = min(3, 1 + user['level'] // 5)
+            
+            if team_count >= max_team_size:
+                return False
+            
+            await conn.execute(
+                'UPDATE animals SET is_in_team = TRUE, team_slot = $1 WHERE id = $2',
+                team_count + 1, animal_uuid
+            )
+            return True
+    
+    async def remove_animal_from_team(self, user_id: int, animal_uuid: str) -> bool:
+        async with self.pool.acquire() as conn:
+            animal = await conn.fetchrow(
+                'SELECT * FROM animals WHERE id = $1 AND user_id = $2',
+                animal_uuid, user_id
+            )
+            
+            if not animal or not animal['is_in_team']:
+                return False
+            
+            await conn.execute(
+                'UPDATE animals SET is_in_team = FALSE, team_slot = NULL WHERE id = $1',
+                animal_uuid
+            )
+            return True
+    
+    async def add_animal_exp(self, animal_uuid: str, amount: int) -> Dict[str, Any]:
+        async with self.pool.acquire() as conn:
+            animal = await conn.fetchrow(
+                'SELECT level, exp, max_hp, attack, defense FROM animals WHERE id = $1',
+                animal_uuid
+            )
+            
+            if not animal:
+                return {"leveled_up": False}
+            
+            new_exp = animal['exp'] + amount
+            level = animal['level']
+            leveled_up = False
+            
+            exp_needed = self.animal_exp_for_level(level)
+            while new_exp >= exp_needed and level < 100:
+                new_exp -= exp_needed
+                level += 1
+                leveled_up = True
+                exp_needed = self.animal_exp_for_level(level)
+            
+            new_max_hp = animal['max_hp']
+            new_attack = animal['attack']
+            new_defense = animal['defense']
+            
+            if leveled_up:
+                level_diff = level - animal['level']
+                new_max_hp += level_diff * 5
+                new_attack += level_diff * 2
+                new_defense += level_diff * 1
+            
+            await conn.execute(
+                '''UPDATE animals 
+                   SET exp = $1, level = $2, max_hp = $3, current_hp = $3, attack = $4, defense = $5 
+                   WHERE id = $6''',
+                new_exp, level, new_max_hp, new_attack, new_defense, animal_uuid
+            )
+            
+            return {"leveled_up": leveled_up, "new_level": level, "exp": new_exp}
+    
+    async def heal_animal(self, animal_uuid: str):
+        async with self.pool.acquire() as conn:
+            await conn.execute(
+                'UPDATE animals SET current_hp = max_hp WHERE id = $1',
+                animal_uuid
+            )
+    
+    async def heal_team(self, user_id: int):
+        async with self.pool.acquire() as conn:
+            await conn.execute(
+                'UPDATE animals SET current_hp = max_hp WHERE user_id = $1 AND is_in_team = TRUE',
+                user_id
+            )
+    
+    async def update_animal_hp(self, animal_uuid: str, new_hp: int):
+        async with self.pool.acquire() as conn:
+            await conn.execute(
+                'UPDATE animals SET current_hp = $1 WHERE id = $2',
+                max(0, new_hp), animal_uuid
+            )
+    
+    async def get_max_team_size(self, user_id: int) -> int:
+        user = await self.get_user(user_id)
+        return min(3, 1 + user['level'] // 5)

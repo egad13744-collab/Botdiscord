@@ -26,6 +26,7 @@ class AdventureBot(commands.Bot):
             'cogs.minigames',
             'cogs.battle',
             'cogs.trade',
+            'cogs.animal',
         ]
         
         for cog in cogs:
@@ -54,41 +55,60 @@ bot = AdventureBot()
 async def help_command(interaction: discord.Interaction):
     embed = discord.Embed(
         title="Adventure Quest - Commands",
-        description="Welcome to Adventure Quest! Here are all available commands:",
+        description="Selamat datang di Adventure Quest! Berikut semua command yang tersedia:",
         color=discord.Color.gold()
     )
     
     embed.add_field(
-        name="Profile & Stats",
-        value="`/profile` - View your profile\n`/inventory` - Check your items\n`/daily` - Claim daily reward",
+        name="👤 Profil & Stats",
+        value="`/profile` - Lihat profilmu\n`/inventory` - Cek itemmu\n`/daily` - Ambil hadiah harian",
         inline=False
     )
     
     embed.add_field(
-        name="Adventure",
-        value="`/hunt` - Hunt for monsters and loot\n`/fish` - Go fishing for treasures\n`/battle` - Fight monsters in PvE",
+        name="🏹 Berburu & Hewan",
+        value="`/hunt` - Berburu untuk menangkap hewan\n"
+              "`/animal list` - Lihat semua hewanmu\n"
+              "`/animal equip <id>` - Tambah hewan ke tim\n"
+              "`/animal unequip <id>` - Keluarkan hewan dari tim\n"
+              "`/animal info <id>` - Info detail hewan\n"
+              "`/animal heal` - Sembuhkan tim\n"
+              "`/team` - Lihat tim battle",
         inline=False
     )
     
     embed.add_field(
-        name="Economy",
-        value="`/shop` - Browse the shop\n`/buy` - Purchase items\n`/sell` - Sell your items\n`/trade` - Trade with other players",
+        name="⚔️ Battle",
+        value="`/battle` - Lawan monster dengan tim hewanmu\n"
+              "*Battle wajib menggunakan hewan di tim!*",
         inline=False
     )
     
     embed.add_field(
-        name="Mini Games",
-        value="`/guess` - Number guessing game\n`/slots` - Try your luck at slots",
+        name="🎣 Memancing",
+        value="`/fish` - Memancing untuk mendapat item",
         inline=False
     )
     
     embed.add_field(
-        name="Equipment",
-        value="`/equip` - Equip items\n`/unequip` - Unequip items",
+        name="💰 Ekonomi",
+        value="`/shop` - Lihat toko\n`/buy` - Beli item\n`/sell` - Jual item\n`/trade` - Trade dengan pemain lain",
         inline=False
     )
     
-    embed.set_footer(text="Adventure Quest | Have fun!")
+    embed.add_field(
+        name="🎮 Mini Games",
+        value="`/guess` - Tebak angka\n`/slots` - Mesin slot",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="🎒 Equipment",
+        value="`/equip` - Pasang equipment\n`/unequip` - Lepas equipment",
+        inline=False
+    )
+    
+    embed.set_footer(text="Adventure Quest | Selamat bermain!")
     await interaction.response.send_message(embed=embed)
 
 if __name__ == "__main__":
