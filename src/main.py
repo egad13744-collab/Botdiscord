@@ -27,6 +27,7 @@ class AdventureBot(commands.Bot):
             'cogs.battle',
             'cogs.trade',
             'cogs.animal',
+            'cogs.leaderboard',
         ]
         
         for cog in cogs:
@@ -105,6 +106,15 @@ async def help_command(interaction: discord.Interaction):
     embed.add_field(
         name="🎒 Equipment",
         value="`/equip` - Pasang equipment\n`/unequip` - Lepas equipment",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="🏆 Leaderboard",
+        value="`/leaderboard` - Lihat peringkat\n"
+              "`/leaderboard coin` - Top koin\n"
+              "`/leaderboard level` - Top level\n"
+              "`/leaderboard win` - Top kemenangan",
         inline=False
     )
     
