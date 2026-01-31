@@ -1,7 +1,7 @@
 # Adventure Quest Discord Bot
 
 ## Overview
-A Discord RPG + Economy bot inspired by OwO Bot but with completely original systems, names, and mechanics. Features hunting, fishing, battles, mini-games, and a full economy system.
+A Discord RPG + Economy bot inspired by OwO Bot but with completely original systems, names, and mechanics. Features hunting to capture animals, animal-based battle system, fishing, mini-games, and a full economy system.
 
 ## Project Structure
 ```
@@ -9,38 +9,51 @@ src/
 ├── main.py           # Bot entry point and help command
 ├── database/
 │   ├── __init__.py
-│   └── db.py         # PostgreSQL database handler
+│   └── db.py         # PostgreSQL database handler (users, animals, inventory)
 ├── data/
 │   ├── __init__.py
 │   ├── items.py      # Items, weapons, rods, skins with rarity
-│   └── monsters.py   # Monster definitions for battles
+│   ├── monsters.py   # Legacy monster definitions
+│   └── animals.py    # Animal & wild monster definitions for battle
 └── cogs/
     ├── __init__.py
     ├── profile.py    # /profile, /equip, /unequip
-    ├── hunt.py       # /hunt command
+    ├── hunt.py       # /hunt - capture animals
     ├── fish.py       # /fish command
     ├── inventory.py  # /inventory command
     ├── shop.py       # /shop, /buy, /sell
     ├── daily.py      # /daily reward
     ├── minigames.py  # /guess, /slots
-    ├── battle.py     # /battle PvE combat
+    ├── battle.py     # /battle - PvE with animal team
+    ├── animal.py     # /animal list/equip/unequip/info/heal, /team
     └── trade.py      # /trade, /accept_trade, /decline_trade
 ```
 
-## Features
+## Core Game Mechanics
 
-### User Profile
-- Level & EXP system with progressive requirements
-- Coins currency
-- Inventory system
-- Daily streak bonuses
-- Equipment slots (weapon, rod, skin)
+### Hunt System
+- `/hunt` captures wild **animals** (not loot items)
+- Each animal has: Name, Rarity, HP, Attack, Defense, Skill
+- Animals automatically added to Animal Inventory
+- Cooldown: 30 seconds
 
-### Hunt & Fish
-- `/hunt` - Hunt monsters for loot (30s cooldown)
-- `/fish` - Fish for treasures (25s cooldown)
-- Random drops with rarity tiers
-- Equipment bonuses affect luck
+### Animal System
+- **Animal Inventory**: Store all captured animals
+- **Animal Team**: Max 3 animals for battle (unlocks based on player level)
+- Commands:
+  - `/animal list` - View all animals
+  - `/animal equip <id>` - Add to team
+  - `/animal unequip <id>` - Remove from team
+  - `/animal info <id>` - Detailed animal info
+  - `/animal heal` - Heal team (costs coins)
+  - `/team` - View battle team
+
+### Battle System
+- **Battle ALWAYS uses Animal Team**
+- Cannot battle without at least 1 animal in team
+- Turn-based combat with animals fighting
+- Animals gain EXP from battle and can level up
+- Player acts as commander (gives bonuses via equipment)
 
 ### Rarity System
 - Common (50% drop rate)
@@ -50,27 +63,20 @@ src/
 - Legendary (2.5%)
 - Mythic (0.5%)
 
-### Equipment & Skins
-- Weapons: Increase battle damage
-- Fishing Rods: Increase fishing luck
-- Skins: Bonus EXP, coins, and luck (not pay-to-win)
+### Animal Skills
+Each animal has a skill (passive or active):
+- **Passive**: Always active (e.g., +10% attack)
+- **Active**: Triggers during battle (e.g., life drain, stun)
 
-### Mini Games
-- `/guess` - Number guessing (1-10, 3 attempts)
-- `/slots` - Slot machine gambling
+### Progression
+- Animals gain EXP from battles
+- Animals level up and get stat boosts
+- Player level unlocks more team slots
 
-### Economy
-- `/daily` - Daily reward with streak bonus
-- `/shop` - Browse weapons, rods, skins
-- `/buy` - Purchase items
-- `/sell` - Sell items for coins
-- `/trade` - Safe player-to-player trading
-
-### Battle System
-- `/battle` - Fight random monsters
-- Turn-based combat
-- Rewards: coins, EXP
-- Stronger weapons = more damage
+### Balance Rules
+- Battle requires animals - no battle without team
+- Equipment gives small bonuses only
+- Not pay-to-win
 
 ## Commands
 | Command | Description |
@@ -78,11 +84,17 @@ src/
 | `/help` | Show all commands |
 | `/profile` | View your profile |
 | `/inventory` | View your items |
-| `/equip` | Equip an item |
-| `/unequip` | Unequip an item |
-| `/hunt` | Go hunting |
-| `/fish` | Go fishing |
-| `/battle` | Fight a monster |
+| `/equip` | Equip player equipment |
+| `/unequip` | Unequip player equipment |
+| `/hunt` | Hunt to capture animals |
+| `/fish` | Go fishing for items |
+| `/animal list` | View all your animals |
+| `/animal equip` | Add animal to team |
+| `/animal unequip` | Remove animal from team |
+| `/animal info` | View animal details |
+| `/animal heal` | Heal all team animals |
+| `/team` | View battle team |
+| `/battle` | Fight monsters with your team |
 | `/daily` | Claim daily reward |
 | `/shop` | Browse shop |
 | `/buy` | Buy an item |
@@ -97,6 +109,13 @@ src/
 - Database: PostgreSQL (Replit built-in)
 - Commands: Slash commands (/)
 - Architecture: Modular cogs system
+
+## Database Tables
+- `users` - Player profiles
+- `inventory` - Item storage
+- `animals` - Captured animals with stats
+- `battle_stats` - Win/loss tracking
+- `trades` - Trade records
 
 ## Environment Variables Required
 - `DISCORD_BOT_TOKEN` - Your Discord bot token
