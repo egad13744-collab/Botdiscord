@@ -35,7 +35,7 @@ src/
 - `/hunt` captures wild **animals** (not loot items)
 - Each animal has: Name, Rarity, HP, Attack, Defense, Skill
 - Animals automatically added to Animal Inventory
-- Cooldown: 30 seconds
+- Cooldown: 15 seconds
 
 ### Animal System
 - **Animal Inventory**: Store all captured animals

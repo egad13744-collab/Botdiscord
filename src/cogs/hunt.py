@@ -5,7 +5,7 @@ import random
 from data.animals import get_random_animal, ANIMALS
 from data.items import Rarity, get_item
 
-HUNT_COOLDOWN = 30
+HUNT_COOLDOWN = 15
 
 class HuntCog(commands.Cog):
     def __init__(self, bot):
