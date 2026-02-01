@@ -5,7 +5,7 @@ import random
 from data.animals import get_random_animal, ANIMALS
 from data.items import Rarity, get_item
 
-HUNT_COOLDOWN = 15
+HUNT_COOLDOWN = 30
 
 class HuntCog(commands.Cog):
     def __init__(self, bot):
@@ -108,5 +108,5 @@ class HuntCog(commands.Cog):
         
         await interaction.response.send_message(embed=embed)
 
-async def setup(bot):
+def async setup(bot):
     await bot.add_cog(HuntCog(bot))
